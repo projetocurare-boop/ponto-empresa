@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validação de Ponto Eletrônico</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        button { background-color: #28a745; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; display: none; width: 100%; margin-top: 20px; }
+        .status { font-weight: bold; color: #555; margin-top: 20px; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Validação de Presença</h2>
+    <p>Aguarde enquanto verificamos sua localização...</p>
+    <div id="status" class="status">Solicitando acesso ao GPS...</div>
+    
+    <!-- Botão que só aparece se o funcionário estiver no local correto -->
+    <button id="btnForms" onclick="irParaForms()">Acessar Formulário de Ponto</button>
+</div>
+
+<script>
+    // ==========================================
+    // CONFIGURAÇÕES DA SUA EMPRESA (ALTERE AQUI)
+    // ==========================================
+    const LATITUDE_EMPRESA = -12.98326; // <--- Cole a latitude da sua empresa aqui
+    const LONGITUDE_EMPRESA = -38.44426; // <--- Cole a longitude da sua empresa aqui
+    const RAIO_PERMITIDO_METROS = 50; // <--- Distância máxima permitida (raio em metros)
+    const LINK_GOOGLE_FORMS = "https://forms.gle/Dbrhceg9rFqMTGf1A"; // <--- Link Corrigido
+    // ==========================================
+
+    const statusDiv = document.getElementById('status');
+    const botao = document.getElementById('btnForms');
+
+    // Função que calcula a distância entre duas coordenadas usando a fórmula de Haversine
+    function calcularDistancia(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Raio da Terra em metros
+        const phi1 = lat1 * Math.PI/180;
+        const phi2 = lat2 * Math.PI/180;
+        const deltaPhi = (lat2-lat1) * Math.PI/180;
+        const deltaLambda = (lon2-lon1) * Math.PI/180;
+
+        const a = Math.sin(deltaPhi/2) * Math.sin(deltaPhi/2) +
+                  Math.cos(phi1) * Math.cos(phi2) *
+                  Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        return R * c; // Retorna a distância em metros
+    }
+
+    function verificarLocalizacao() {
+        if (!navigator.geolocation) {
+            statusDiv.innerHTML = "<span class='error'>Seu navegador não suporta geolocalização.</span>";
+            return;
+        }
+
+        // Configuração para forçar alta precisão do GPS do celular
+        const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const latUsuario = position.coords.latitude;
+                const lonUsuario = position.coords.longitude;
+
+                const distancia = calcularDistancia(latUsuario, lonUsuario, LATITUDE_EMPRESA, LONGITUDE_EMPRESA);
+
+                if (distancia <= RAIO_PERMITIDO_METROS) {
+                    statusDiv.innerHTML = "<span style='color: #28a745;'>Localização confirmada! Você está na empresa.</span>";
+                    botao.style.display = "block"; // Libera o botão
+                } else {
+                    statusDiv.innerHTML = `<span class='error'>Acesso Negado.<br>Você está fora do raio permitido da empresa.</span>`;
+                }
+            },
+            (error) => {
+                statusDiv.innerHTML = "<span class='error'>Erro ao obter localização. Ative o GPS do seu celular e tente novamente.</span>";
+            },
+            options
+        );
+    }
+
+    function irParaForms() {
+        window.location.href = LINK_GOOGLE_FORMS;
+    }
+
+    // Executa a verificação assim que a página abre
+    window.onload = verificarLocalizacao;
+</script>
+
+</body>
+</html>
